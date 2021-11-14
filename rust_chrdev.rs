@@ -1,63 +1,93 @@
-// SPDX-License-Identifier: GPL-2.0
-
-//! Rust character device sample
+//! Rust device sample
 
 #![no_std]
 #![feature(allocator_api, global_asm)]
 
-use kernel::prelude::*;
+use core::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+
 use kernel::{
-    c_str, chrdev, file::File, file_operations::FileOperations, io_buffer::IoBufferWriter,
+    file::File,
+    file_operations::{FileOpener, FileOperations},
+    io_buffer::IoBufferWriter,
+    miscdev::Registration,
+    prelude::*,
+    str::CStr,
+    sync::Ref,
+    ThisModule,
 };
 
 module! {
-    type: RustChrdev,
-    name: b"rust_chrdev",
+    type: Rustdev,
+    name: b"rust_mydev",
     author: b"Rust for Linux Contributors",
     description: b"Rust character device sample",
     license: b"GPL v2",
 }
 
-#[derive(Default)]
-struct RustFile;
+struct Shared {
+    open_count: AtomicU64,
+}
 
-impl FileOpener for RustFile {}
+struct RustFile {
+    read_count: AtomicUsize,
+}
+
+impl FileOpener<Ref<Shared>> for RustFile {
+    fn open(shared: &Ref<Shared>) -> Result<Box<Self>> {
+        shared.open_count.fetch_add(1, Ordering::SeqCst);
+        pr_info!(
+            "Opened the file {} times\n",
+            shared.open_count.load(Ordering::SeqCst)
+        );
+        Ok(Box::try_new(Self {
+            read_count: AtomicUsize::new(0),
+        })?)
+    }
+}
+
+const HELLO: &'static str = "🦀 Hello from rust\n\0";
 
 impl FileOperations for RustFile {
-    // kernel::declare_file_operations!();
-    kernel::declare_file_operations!(open, read, read_iter);
+    kernel::declare_file_operations!(read);
 
     fn read(
-        _shared: &Self,
+        this: &Self,
         _file: &File,
         data: &mut impl IoBufferWriter,
         _offset: u64,
     ) -> Result<usize> {
-        let hello = "Hello from the kernel in Rust".as_bytes();
-        data.write_slice(&hello)?;
-        Ok(hello.len())
+        let hello_bytes = HELLO.as_bytes();
+        if hello_bytes.len() > this.read_count.load(Ordering::SeqCst) {
+            if data.len() >= hello_bytes.len() {
+                data.write_slice(&hello_bytes)?;
+                this.read_count.store(hello_bytes.len(), Ordering::Relaxed);
+                return Ok(hello_bytes.len());
+            }
+        }
+        Ok(0)
     }
 }
 
-struct RustChrdev {
-    _dev: Pin<Box<chrdev::Registration<1>>>,
+struct Rustdev {
+    _dev: Pin<Box<Registration<Ref<Shared>>>>,
 }
 
-impl KernelModule for RustChrdev {
-    fn init() -> Result<Self> {
-        pr_info!("Rust character device sample (init)\n");
+impl KernelModule for Rustdev {
+    fn init(name: &'static CStr, _module: &'static ThisModule) -> Result<Self> {
+        pr_info!("Rust device sample (init)\n");
 
-        let mut chrdev_reg =
-            chrdev::Registration::new_pinned(c_str!("rust_chrdev"), 0, &THIS_MODULE)?;
+        let shared = Ref::try_new(Shared {
+            open_count: AtomicU64::new(0),
+        })?;
 
-        chrdev_reg.as_mut().register::<RustFile>()?;
-
-        Ok(RustChrdev { _dev: chrdev_reg })
+        Ok(Rustdev {
+            _dev: Registration::new_pinned::<RustFile>(name, None, shared)?,
+        })
     }
 }
 
-impl Drop for RustChrdev {
+impl Drop for Rustdev {
     fn drop(&mut self) {
-        pr_info!("Rust character device sample (exit)\n");
+        pr_info!("Rust device sample (exit)\n");
     }
 }
