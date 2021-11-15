@@ -22,7 +22,7 @@ Exemples :
 - Une référence vers une valeur ne peut pas exister au delà de l'existence de la valeur
 - Une seule référence mutable vers une valeur peut exister à un instant donné
 
-Ces invariants permettent d'éviter des comportements indéfinis liés notamment à
+Ces invariants permettent d'éviter des comportements indéfinis liés à
 l'utilisation de pointeurs non-initialisés notamment le déréférencement de null
 pointers ou les Use after-free.
 
