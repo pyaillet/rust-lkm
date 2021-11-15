@@ -22,7 +22,7 @@ Les invariants tels que :
 
 Offrent des garanties sur la manipulation de la mémoire. Elles permettent
 d'éviter des comportements indéfinis liés notamment à l'utilisation de pointeurs
-non-initialisés (Null pointers, Use after-free, ...).
+non-initialisés comme par exemple: Null pointers, Use after-free.
 
 Le système de type de Rust nous permet également d'obtenir des garanties sur
 les données manipulées vérifiées par le compilateur alors que dans le cadre d'une
@@ -41,7 +41,7 @@ De mon côté, j'ai décidé de faire ça sur une machine virtuelle Ubuntu 21.04
 La plupart des étapes de ce tutoriel sont basés sur la documentation officiel
 du projet [Rust for Linux](https://github.com/Rust-for-Linux/linux/blob/rust/Documentation/rust/quick-start.rst).
 
-On va commencer par l'installation des outils nécessaires à la compilation :
+Commencer par l'installation des outils nécessaires à la compilation :
 
 ```sh
 # Distro packages
@@ -49,7 +49,7 @@ sudo apt update
 sudo apt install -y flex bison clang lld build-essential llvm git libelf-dev libclang-11-dev libssl-dev tmux
 ```
 
-Ensuite on installe la toolchain Rust qui sera utilisée pour la compilation du
+Ensuite installer la toolchain Rust qui sera utilisée pour la compilation du
 kernel et les dépendances nécessaires.
 
 `rust-src` : le code source de la standard librairie Rust est nécessaire car on
@@ -64,7 +64,7 @@ rustup component add rust-src
 cargo install --locked --version 0.56.0 bindgen
 ```
 
-On clone les sources du kernel intégrant les patchs nécessaires pour Rust :
+Cloner les sources du kernel intégrant les patchs nécessaires pour Rust :
 
 ```sh
 # Clone kernel src
@@ -74,7 +74,7 @@ git clone --depth=1 https://github.com/Rust-for-Linux/linux.git
 Il faut ensuite configurer le kernel pour activer le support de Rust et intégrer
 nos exemples.
 
-On commence par recopier la configuration actuelle du kernel afin de minimiser
+Recopier la configuration actuelle du kernel afin de minimiser
 les changements à effectuer.
 
 ```sh
@@ -83,7 +83,7 @@ cd linux
 make oldconfig
 ```
 
-On va ensuite devoir configurer les options spécifiques :
+Configurer les options spécifiques :
 ```sh
 make menuconfig
 ```
@@ -95,7 +95,7 @@ Il est nécessaire de désactiver le versioning des modules :
 Enable loadable module support => [ ] Module versioning support
 ```
 
-On peut alors activer le support de Rust :
+Activaction du support de Rust :
 ```
 General Setup => [*] Rust support
 ```
@@ -113,7 +113,7 @@ Cryptographic API => Certificates for signature checking => () Additional X.509 
 Cryptographic API => Certificates for signature checking => () X.509 certificates to be preloaded into the system blacklist keyring
 ```
 
-On peut alors lancer la compilation et aller se chercher 2~3 cafés...
+Lancer la compilation et aller se chercher 2~3 cafés...
 Il faudra adapter le `-j5` en fonction du nombre de core disponibles sur la
 machine utilisée pour la compilation (en général, on choisit `nombre de core + 1`,
 ce qui permet de lancer 5 tâches de compilation en parallèle, et d'occuper tous
@@ -123,8 +123,8 @@ des IO).
 make LLVM=1 -j5
 ```
 
-Une fois la compilation terminée, on installe les modules dans l'arborescence
-du système et on installe le kernel.
+Une fois la compilation terminée, installer les modules dans l'arborescence
+du système et installer le kernel.
 
 ```sh
 sudo make modules_install
@@ -136,9 +136,13 @@ sudo make install
 Pour tester vous pouvez alors redémarrer la machine et vérifier la version du
 kernel utilisé suite à ce redémarrage :
 
-```sh
-sudo reboot
-uname -a 
+```shell-session
+$ sudo reboot
+
+# Puis
+
+$ uname -a
+Linux lima-default 5.15.0+ #4 SMP PREEMPT Sun Nov 14 13:41:03 UTC 2021 x86_64 x86_64 x86_64 GNU/Linux
 ```
 
 Il est alors possible de charger le module écrit en Rust.
@@ -168,18 +172,18 @@ Vous pouvez retrouver cet exemple sur [ce repo](https://github.com/Rust-for-Linu
 Nous allons commencer par le `Makefile` qui sera utilisé pour compiler notre
 module. 
 ```Makefile
-# On déclare le module à compiler en indiquant le fichier objet résultant
+# Déclarer le module à compiler en indiquant le fichier objet résultant
 obj-m += rust_chrdev.o
 
-# On déclare notre cible par défaut en précisant :
-# - LLVM=1 : Qu'on souhaite utiliser LLVM
-# - -C /lib/modules/$(shell uname -r)/build : On utilise le système de build du kernel
-# - M=$(PWD) : On indique le chemin du module
-# - modules : On indique qu'on souhaite compiler notre module
+# Déclarer notre cible par défaut en précisant :
+# - LLVM=1 : Utilisation de LLVM
+# - -C /lib/modules/$(shell uname -r)/build : Utilisation du système de build du kernel
+# - M=$(PWD) : Le chemin du module
+# - modules : Compilation notre module
 all:
 	make LLVM=1 -j5 -C /lib/modules/$(shell uname -r)/build M=$(PWD) modules
 
-# On ajoute une cible pour indiquer comment faire le ménage
+# Ajout une cible pour indiquer comment faire le ménage
 clean:
 	make -C /lib/modules/$(shell uname -r)/build M=$(PWD) clean
 ```
@@ -188,8 +192,8 @@ Passons maintenant au code de notre module, vous pouvez retrouver l'exemple
 complet [sur github](https://github.com/pyaillet/rust-lkm).
 Nous allons commencer par un exemple simple, notre module créera un
 `character device` qui transmettra la chaîne `🦀 Hello from rust\n` lorsqu'on
-lira dedans, une fois le fichier ouvert 
-On stockera également un état partagé qui nous permettra de comptabiliser
+lira dedans, une fois le fichier ouvert.
+Nous stockerons également un état partagé qui nous permettra de comptabiliser
 combien de fois le fichier a été ouvert.
 
 Commençons par déclarer les structures qui stockeront l'état de lecture du
@@ -233,13 +237,13 @@ impl KernelModule for Rustdev {
         // Cette macro permet d'afficher un message d'information dans `dmesg`
         pr_info!("Rust device sample (init)\n");
 
-        // Ici, on initialise l'état partagé qui comptera le nombre d'accès à
+        // Initialisation de l'état partagé qui comptera le nombre d'accès à
         // notre device
         let shared = Ref::try_new(Shared {
             open_count: AtomicU64::new(0),
         })?;
 
-        // Enfin, on crée la structure correspondant à notre module, on crée
+        // Création de la structure correspondant à notre module, et création de
         // l'enregistrement qui portera notre état partagé.
         Ok(Rustdev {
             _dev: Registration::new_pinned::<RustFile>(name, None, shared)?,
@@ -248,8 +252,8 @@ impl KernelModule for Rustdev {
 }
 ```
 
-On implémente également le trait `Drop` qui sera utilisé si on décharge le
-module.
+Nous implémentons également le trait `Drop` qui sera utilisé lors de la suppression
+du module.
 ```rs
 impl Drop for Rustdev {
     fn drop(&mut self) {
@@ -258,7 +262,7 @@ impl Drop for Rustdev {
 }
 ```
 
-Il nous manque encore l'appel à une macro pour finaliser les déclarations
+Il faut également utiliser une macro pour finaliser les déclarations
 nécessaires à la prise en compte de notre module :
 ```rs
 module! {
@@ -282,16 +286,16 @@ Il nous manque encore 2 traits à implémenter :
 /// partagé (ce qui n'est pas fait dans cet exemple).
 impl FileOpener<Ref<Shared>> for RustFile {
     fn open(shared: &Ref<Shared>) -> Result<Box<Self>> {
-        // On met à jour le compteur d'ouverture du fichier
+        // Mise à jour le compteur d'ouverture du fichier
         shared.open_count.fetch_add(1, Ordering::SeqCst);
 
-        // On affiche dans le `dmesg` le nombre de fois que le device a été
+        // Affichage dans le `dmesg` le nombre de fois que le device a été
         // ouvert
         pr_info!(
             "Opened the file {} times\n",
             shared.open_count.load(Ordering::SeqCst)
         );
-        // On initialise et on retourne la structure correspondant à l'ouverture
+        // Initialisation et transfert de la structure correspondant à l'ouverture
         // courante de notre fichier.
         Ok(Box::try_new(Self {
             read_count: AtomicUsize::new(0),
@@ -324,23 +328,23 @@ impl FileOperations for RustFile {
         if hello_bytes.len() > this.read_count.load(Ordering::SeqCst) {
             // Et si le buffer fournit est assez grand pour y écrire le message
             if data.len() >= hello_bytes.len() {
-                // Alors on écrit notre message dans ce buffer
+                // Écriture notre message dans ce buffer
                 data.write_slice(&hello_bytes)?;
-                // On met à jour le compteur d'octets lu pour cette ouverture
+                // Mise à jour le compteur d'octets lu pour cette ouverture
                 // de fichier
                 this.read_count.store(hello_bytes.len(), Ordering::SeqCst);
-                // On retourne le nombre d'octets lus et réellement écrits
+                // Renvoie du nombre d'octets lus et réellement écrits
                 // dans le buffer
                 return Ok(hello_bytes.len());
             }
         }
-        // Dans les autres cas, on indique qu'aucun octet n'a été lu
+        // Dans les autres cas, aucun octet n'a été lu
         Ok(0)
     }
 }
 ```
 
-Vous pouvez retrouver l'exemple complet [ici]().
+Vous pouvez retrouver l'exemple complet [ici](https://github.com/pyaillet/rust-lkm).
 
 Voici un exemple de session avec utilisation de ce module :
 
@@ -390,7 +394,7 @@ une grosse partie du travail restant consiste à disposer des abstractions
 permettant d'interagir avec les APIs internes du kernel tout en conservant les
 garanties fournies par Rust.
 Si le sujet vous intéresse je vous invite à regarder les présentations données
-en référence.
+en référence : "[Rust for Linux](https://www.youtube.com/watch?v=46Ky__Gid7M)" et "[Rust in the Linux ecosystem](https://www.youtube.com/watch?v=jTWdk0jYy54)"
 
 ## Références
 
