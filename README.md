@@ -15,13 +15,13 @@ exemple "simple" de module Rust pour le noyau Linux.
 ## L'intérêt de Rust
 
 L'objectif du langage Rust est de fournir un langage bas niveau, mais
-fournissant davantages de garanties qu'un langage comme le langage C.
+fournissant davantages de garanties qu'un langage comme le C.
 Les invariants tels que :
 - Une référence vers une valeur ne peut pas exister au delà de l'existence de la valeur
 - Une seule référence mutable vers une valeur peut exister à un instant donné
 
 Offrent des garanties sur la manipulation de la mémoire. Elles permettent
-d'éviter des comportements indéfinies liés notamment à l'utilisation de pointeurs
+d'éviter des comportements indéfinis liés notamment à l'utilisation de pointeurs
 non-initialisés (Null pointers, Use after-free, ...).
 
 Le système de type de Rust nous permet également d'obtenir des garanties sur
@@ -30,7 +30,7 @@ implémentation en C, c'est au développeur de prendre les précautions nécessa
 
 Si vous voulez en savoir plus à ce sujet, je vous invite à regarder
 [cette présentation](https://www.youtube.com/watch?v=46Ky__Gid7M) qui détaille
-ce qu'on entend par comportement indéfni et comment Rust permet de les limiter.
+ce qu'on entend par comportement indéfini et comment Rust permet de les limiter.
 
 ## Compilation du kernel avec support de Rust  
 
@@ -152,7 +152,7 @@ $ sudo dmesg | grep rust_chrdev
 [27425.248428] rust_chrdev: Rust character device sample (exit)
 ```
 
-Nous avons donc pu charger notre module exemple écrit en rust !
+Nous avons donc pu charger notre module exemple écrit en Rust !
 
 ## Exemple de module écrit en Rust avec explications
 
@@ -270,7 +270,7 @@ module! {
 }
 ```
 
-Il nous manque encore 2 trait à implémenter :
+Il nous manque encore 2 traits à implémenter :
 - `FileOpener` pour traiter l'ouverture du fichier de notre `character device`
 - `FileOperations` pour implémenter le comportement lors de la lecture de ce fichier
 
