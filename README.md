@@ -16,13 +16,16 @@ exemple "simple" de module Rust pour le noyau Linux.
 
 L'objectif du langage Rust est de fournir un langage bas niveau, mais
 fournissant davantages de garanties qu'un langage comme le C.
-Les invariants tels que :
+
+Des invariants du langage offrent des garanties sur la manipulation de la mémoire.
+Exemples :
 - Une référence vers une valeur ne peut pas exister au delà de l'existence de la valeur
 - Une seule référence mutable vers une valeur peut exister à un instant donné
 
-Offrent des garanties sur la manipulation de la mémoire. Elles permettent
-d'éviter des comportements indéfinis liés notamment à l'utilisation de pointeurs
-non-initialisés comme par exemple: Null pointers, Use after-free.
+Ces invariants permettent d'éviter des comportements indéfinis liés notamment à
+l'utilisation de pointeurs non-initialisés notamment le déréférencement de null
+pointers ou les Use after-free.
+
 
 Le système de type de Rust nous permet également d'obtenir des garanties sur
 les données manipulées vérifiées par le compilateur alors que dans le cadre d'une
